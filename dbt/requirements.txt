@@ -1,0 +1,8 @@
+# DBT Requirements
+# Install these packages in your Airflow environment
+
+dbt-core>=1.7.0
+dbt-postgres>=1.7.0
+# dbt-bigquery>=1.7.0  # Uncomment if using BigQuery
+# dbt-snowflake>=1.7.0  # Uncomment if using Snowflake
+# dbt-redshift>=1.7.0   # Uncomment if using Redshift
