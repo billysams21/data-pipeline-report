@@ -1,8 +1,8 @@
-name: 'analytics_project'
+name: 'my_dbt_project'
 version: '1.0.0'
 config-version: 2
 
-profile: 'analytics_project'
+profile: 'my_dbt_project'
 
 model-paths: ["models"]
 analysis-paths: ["analyses"]
@@ -19,6 +19,10 @@ clean-targets:
 models:
   analytics_project:
     marts:
+      +schema: analytics
       +materialized: table
     intermediate:
+      +materialized: view
+    staging:
+      +schema: staging_dbt
       +materialized: view

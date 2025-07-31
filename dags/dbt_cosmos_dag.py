@@ -1,28 +1,29 @@
 from __future__ import annotations
 import pendulum
-from airflow.models.dag import DAG
+from cosmos import ProjectConfig, ProfileConfig
 from cosmos import DbtDag
+import os
 
-# sesuai dbt_project.yml
-profile_config = {
-  "profile_name": "analytics_project",
-  "target_name": "dev",
-  "profiles_yml_path": "/opt/airflow/dbt/profiles/profiles.yml",
-}
+dbt_project_path = f"{os.environ['AIRFLOW_HOME']}/dbt"
+dbt_profiles_path = f"{os.environ['AIRFLOW_HOME']}/dbt/profiles"
 
 # Definisikan DAG dbt
 dbt_cosmos_dag = DbtDag(
-  # Konfigurasi DAG
-  dag_id="dbt_cosmos_dag",
-  schedule_interval="@daily",
-  start_date=pendulum.datetime(2023, 1, 1, tz="UTC"),
-  catchup=False,
-  tags=["dbt", "cosmos"],
-  # Konfigurasi Proyek dbt
-  project_dir="/opt/airflow/dbt",
-  # Konfigurasi Profil dbt
-  profile_config=profile_config,
-  # Konfigurasi Eksekusi
-  dbt_command="run",  # Perintah dbt yang akan dijalankan
-  # Cosmos akan menjalankan 'dbt run' secara default
+    # Konfigurasi DAG
+    dag_id="dbt_cosmos_dag",
+    schedule="@daily",
+    start_date=pendulum.datetime(2025 , 1, 1, tz="UTC"),
+    catchup=False,
+    tags=["dbt", "cosmos"],
+    # Konfigurasi Profil dbt
+    profile_config=ProfileConfig(
+        profile_name="analytics_project",
+        target_name="dev",
+        profiles_yml_filepath=os.path.join(dbt_profiles_path, "profiles.yml"),
+    ),
+    project_config=ProjectConfig(
+        dbt_project_path=dbt_project_path,
+    )
 )
+
+# wait_for_files >> [stage_main_table, stage_metadata_table] >> dbt_run >> [make_excel, make_pdf]

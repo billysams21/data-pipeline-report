@@ -1,0 +1,608 @@
+version: 2
+
+sources:
+  - name: staging
+    database: airflow # Sesuaikan jika nama database Anda berbeda
+    schema: staging
+    tables:
+      - name: main
+        description: "Tabel mentah berisi fitur utama dan target dari kampanye marketing bank (bank-full.csv)."
+        columns:
+          - name: age
+            description: "Umur klien (numeric)"
+            tests:
+              - not_null
+              - dbt_utils.accepted_range:
+                  min_value: 18
+                  max_value: 100
+          - name: job
+            description: "Jenis pekerjaan (categorical)"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['admin.', 'blue-collar', 'entrepreneur', 'housemaid', 'management', 'retired', 'self-employed', 'services', 'student', 'technician', 'unemployed', 'unknown']
+          - name: marital
+            description: "Status pernikahan (categorical: divorced means divorced or widowed)"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['divorced', 'married', 'single', 'unknown']
+          - name: education
+            description: "Tingkat pendidikan (categorical)"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['primary', 'secondary', 'tertiary', 'unknown']
+          - name: default
+            description: "Apakah memiliki kredit macet (categorical)"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['no', 'yes', 'unknown']
+          - name: balance
+            description: "Saldo rata-rata tahunan dalam euro (numeric)"
+            tests:
+              - not_null
+          - name: housing
+            description: "Apakah memiliki pinjaman rumah (categorical)"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['no', 'yes', 'unknown']
+          - name: loan
+            description: "Apakah memiliki pinjaman pribadi (categorical)"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['no', 'yes', 'unknown']
+          - name: contact
+            description: "Jenis komunikasi kontak (categorical)"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['cellular', 'telephone', 'unknown']
+          - name: day
+            description: "Hari kontak terakhir dalam bulan (numeric)"
+            tests:
+              - not_null
+              - dbt_utils.accepted_range:
+                  min_value: 1
+                  max_value: 31
+          - name: month
+            description: "Bulan kontak terakhir dalam tahun (categorical)"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+          - name: duration
+            description: "Durasi kontak terakhir dalam detik (numeric). IMPORTANT: attribute highly affects output target, should be discarded for realistic predictive model"
+            tests:
+              - not_null
+              - dbt_utils.accepted_range:
+                  min_value: 0
+          - name: campaign
+            description: "Jumlah kontak yang dilakukan selama kampanye ini untuk klien ini (numeric, includes last contact)"
+            tests:
+              - not_null
+              - dbt_utils.accepted_range:
+                  min_value: 1
+          - name: pdays
+            description: "Jumlah hari sejak klien dihubungi terakhir dari kampanye sebelumnya (numeric; 999 = tidak pernah dihubungi sebelumnya)"
+            tests:
+              - not_null
+          - name: previous
+            description: "Jumlah kontak yang dilakukan sebelum kampanye ini untuk klien ini (numeric)"
+            tests:
+              - not_null
+              - dbt_utils.accepted_range:
+                  min_value: 0
+          - name: poutcome
+            description: "Hasil kampanye marketing sebelumnya (categorical)"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['failure', 'nonexistent', 'success', 'unknown']
+          - name: y
+            description: "Target variable - apakah klien berlangganan deposito berjangka? (binary)"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['yes', 'no']
+      - name: metadata
+        description: "Tabel dengan data lengkap termasuk indikator sosial ekonomi (bank-additional-full.csv)."
+        columns:
+          - name: age
+            description: "Umur klien (numeric)"
+            tests:
+              - not_null
+              - dbt_utils.accepted_range:
+                  min_value: 18
+                  max_value: 100
+          - name: job
+            description: "Jenis pekerjaan (categorical)"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['admin.', 'blue-collar', 'entrepreneur', 'housemaid', 'management', 'retired', 'self-employed', 'services', 'student', 'technician', 'unemployed', 'unknown']
+          - name: marital
+            description: "Status pernikahan (categorical: divorced means divorced or widowed)"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['divorced', 'married', 'single', 'unknown']
+          - name: education
+            description: "Tingkat pendidikan (categorical)"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['basic.4y', 'basic.6y', 'basic.9y', 'high.school', 'illiterate', 'professional.course', 'university.degree', 'unknown']
+          - name: default
+            description: "Apakah memiliki kredit macet (categorical)"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['no', 'yes', 'unknown']
+          - name: housing
+            description: "Apakah memiliki pinjaman rumah (categorical)"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['no', 'yes', 'unknown']
+          - name: loan
+            description: "Apakah memiliki pinjaman pribadi (categorical)"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['no', 'yes', 'unknown']
+          - name: contact
+            description: "Jenis komunikasi kontak (categorical)"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['cellular', 'telephone']
+          - name: month
+            description: "Bulan kontak terakhir dalam tahun (categorical)"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+          - name: day_of_week
+            description: "Hari kontak terakhir dalam seminggu (categorical)"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['mon', 'tue', 'wed', 'thu', 'fri']
+          - name: duration
+            description: "Durasi kontak terakhir dalam detik (numeric). IMPORTANT: attribute highly affects output target, should be discarded for realistic predictive model"
+            tests:
+              - not_null
+              - dbt_utils.accepted_range:
+                  min_value: 0
+          - name: campaign
+            description: "Jumlah kontak yang dilakukan selama kampanye ini untuk klien ini (numeric, includes last contact)"
+            tests:
+              - not_null
+              - dbt_utils.accepted_range:
+                  min_value: 1
+          - name: pdays
+            description: "Jumlah hari sejak klien dihubungi terakhir dari kampanye sebelumnya (numeric; 999 = tidak pernah dihubungi sebelumnya)"
+            tests:
+              - not_null
+          - name: previous
+            description: "Jumlah kontak yang dilakukan sebelum kampanye ini untuk klien ini (numeric)"
+            tests:
+              - not_null
+              - dbt_utils.accepted_range:
+                  min_value: 0
+          - name: poutcome
+            description: "Hasil kampanye marketing sebelumnya (categorical)"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['failure', 'nonexistent', 'success']
+          - name: emp_var_rate
+            description: "Employment variation rate - quarterly indicator (numeric)"
+            tests:
+              - not_null
+          - name: cons_price_idx
+            description: "Consumer price index - monthly indicator (numeric)"
+            tests:
+              - not_null
+          - name: cons_conf_idx
+            description: "Consumer confidence index - monthly indicator (numeric)"
+            tests:
+              - not_null
+          - name: euribor3m
+            description: "Euribor 3 month rate - daily indicator (numeric)"
+            tests:
+              - not_null
+          - name: nr_employed
+            description: "Number of employees - quarterly indicator (numeric)"
+            tests:
+              - not_null
+          - name: y
+            description: "Target variable - apakah klien berlangganan deposito berjangka? (binary)"
+            tests:
+              - not_null
+              - accepted_values:
+                  values: ['yes', 'no']
+
+models:
+  - name: stg_main
+    description: "Model staging untuk data marketing utama (bank-full.csv). Membersihkan, mengubah nama, dan melakukan casting tipe data."
+    columns:
+      - name: age
+        description: "Umur klien (numeric)."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 15
+              max_value: 100
+      - name: job
+        description: "Jenis pekerjaan klien (categorical)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['admin.', 'blue-collar', 'entrepreneur', 'housemaid', 'management', 'retired', 'self-employed', 'services', 'student', 'technician', 'unemployed', 'unknown']
+      - name: marital_status
+        description: "Status pernikahan klien (categorical)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['divorced', 'married', 'single', 'unknown']
+      - name: education_level
+        description: "Tingkat pendidikan klien (categorical)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['primary', 'secondary', 'tertiary', 'unknown']
+      - name: has_credit_in_default
+        description: "Apakah klien memiliki kredit macet (categorical)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['no', 'yes', 'unknown']
+      - name: balance
+        description: "Saldo rata-rata tahunan dalam euro (numeric)."
+        tests:
+          - not_null
+      - name: has_housing_loan
+        description: "Apakah klien memiliki pinjaman rumah (categorical)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['no', 'yes', 'unknown']
+      - name: has_personal_loan
+        description: "Apakah klien memiliki pinjaman pribadi (categorical)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['no', 'yes', 'unknown']
+      - name: contact_type
+        description: "Jenis komunikasi kontak (categorical)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['cellular', 'telephone', 'unknown']
+      - name: contact_day_of_month
+        description: "Hari kontak terakhir dalam bulan (numeric)."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+              max_value: 31
+      - name: contact_month
+        description: "Bulan kontak terakhir dalam tahun (categorical)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+      - name: contact_duration_seconds
+        description: "Durasi kontak terakhir dalam detik (numeric). IMPORTANT: highly affects target, should be discarded for realistic predictive model."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+      - name: campaign_contacts
+        description: "Jumlah kontak yang dilakukan selama kampanye ini untuk klien ini (numeric, includes last contact)."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+      - name: days_since_last_contact
+        description: "Jumlah hari sejak klien dihubungi terakhir dari kampanye sebelumnya (numeric; 999 = tidak pernah dihubungi)."
+        tests:
+          - not_null
+      - name: previous_contacts
+        description: "Jumlah kontak yang dilakukan sebelum kampanye ini untuk klien ini (numeric)."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+      - name: previous_campaign_outcome
+        description: "Hasil kampanye marketing sebelumnya (categorical)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['failure', 'other', 'success', 'unknown']
+      - name: has_subscribed
+        description: "Target variable - apakah klien berlangganan deposito berjangka (binary)."
+        tests:
+          - not_null
+
+  - name: stg_metadata
+    description: "Model staging untuk data lengkap dengan indikator sosial ekonomi (bank-additional-full.csv). Membersihkan, mengubah nama, dan melakukan casting tipe data."
+    columns:
+      - name: age
+        description: "Umur klien (numeric)."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 15
+              max_value: 100
+      - name: job
+        description: "Jenis pekerjaan klien (categorical)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['admin.', 'blue-collar', 'entrepreneur', 'housemaid', 'management', 'retired', 'self-employed', 'services', 'student', 'technician', 'unemployed', 'unknown']
+      - name: marital_status
+        description: "Status pernikahan klien (categorical)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['divorced', 'married', 'single', 'unknown']
+      - name: education_level
+        description: "Tingkat pendidikan klien (categorical)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['basic.4y', 'basic.6y', 'basic.9y', 'high.school', 'illiterate', 'professional.course', 'university.degree', 'unknown']
+      - name: has_credit_in_default
+        description: "Apakah klien memiliki kredit macet (categorical)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['no', 'yes', 'unknown']
+      - name: has_housing_loan
+        description: "Apakah klien memiliki pinjaman rumah (categorical)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['no', 'yes', 'unknown']
+      - name: has_personal_loan
+        description: "Apakah klien memiliki pinjaman pribadi (categorical)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['no', 'yes', 'unknown']
+      - name: contact_type
+        description: "Jenis komunikasi kontak (categorical)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['cellular', 'telephone']
+      - name: contact_month
+        description: "Bulan kontak terakhir dalam tahun (categorical)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
+      - name: contact_day_of_week
+        description: "Hari kontak terakhir dalam seminggu (categorical)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['mon', 'tue', 'wed', 'thu', 'fri']
+      - name: contact_duration_seconds
+        description: "Durasi kontak terakhir dalam detik (numeric). IMPORTANT: highly affects target, should be discarded for realistic predictive model."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+      - name: campaign_contacts
+        description: "Jumlah kontak yang dilakukan selama kampanye ini untuk klien ini (numeric, includes last contact)."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+      - name: days_since_last_contact
+        description: "Jumlah hari sejak klien dihubungi terakhir dari kampanye sebelumnya (numeric; 999 = tidak pernah dihubungi)."
+        tests:
+          - not_null
+      - name: previous_contacts
+        description: "Jumlah kontak yang dilakukan sebelum kampanye ini untuk klien ini (numeric)."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+      - name: previous_campaign_outcome
+        description: "Hasil kampanye marketing sebelumnya (categorical)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['failure', 'nonexistent', 'success']
+      - name: employment_variation_rate
+        description: "Employment variation rate - quarterly indicator (numeric)."
+        tests:
+          - not_null
+      - name: consumer_price_index
+        description: "Consumer price index - monthly indicator (numeric)."
+        tests:
+          - not_null
+      - name: consumer_confidence_index
+        description: "Consumer confidence index - monthly indicator (numeric)."
+        tests:
+          - not_null
+      - name: euribor_3_month_rate
+        description: "Euribor 3 month rate - daily indicator (numeric)."
+        tests:
+          - not_null
+      - name: number_of_employees
+        description: "Number of employees - quarterly indicator (numeric)."
+        tests:
+          - not_null
+      - name: has_subscribed
+        description: "Target variable - apakah klien berlangganan deposito berjangka (binary)."
+        tests:
+          - not_null
+
+  - name: fact_features
+    description: "Tabel fakta yang berisi semua fitur untuk analisis dan modeling dari dataset utama (bank-full.csv)."
+    columns:
+      - name: feature_id
+        description: "Primary key unik untuk setiap record."
+        tests:
+          - not_null
+          - unique
+      - name: balance
+        description: "Saldo rata-rata tahunan dalam euro."
+        tests:
+          - not_null
+      - name: contact_day_of_month
+        description: "Hari kontak terakhir dalam bulan."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 1
+              max_value: 31
+      - name: has_subscribed
+        description: "Target variable - apakah klien berlangganan deposito berjangka."
+        tests:
+          - not_null
+
+  - name: fact_features_extended
+    description: "Tabel fakta yang berisi semua fitur termasuk indikator sosial ekonomi untuk analisis dan modeling dari dataset lengkap (bank-additional-full.csv)."
+    columns:
+      - name: feature_id
+        description: "Primary key unik untuk setiap record."
+        tests:
+          - not_null
+          - unique
+      - name: employment_variation_rate
+        description: "Employment variation rate - quarterly indicator."
+        tests:
+          - not_null
+      - name: consumer_price_index
+        description: "Consumer price index - monthly indicator."
+        tests:
+          - not_null
+      - name: consumer_confidence_index
+        description: "Consumer confidence index - monthly indicator."
+        tests:
+          - not_null
+      - name: euribor_3_month_rate
+        description: "Euribor 3 month rate - daily indicator."
+        tests:
+          - not_null
+      - name: number_of_employees
+        description: "Number of employees - quarterly indicator."
+        tests:
+          - not_null
+      - name: contact_day_of_week
+        description: "Hari kontak terakhir dalam seminggu."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['mon', 'tue', 'wed', 'thu', 'fri']
+      - name: has_subscribed
+        description: "Target variable - apakah klien berlangganan deposito berjangka."
+        tests:
+          - not_null
+
+  - name: dim_variables
+    description: "Dimensi yang berisi metadata dan deskripsi untuk semua variabel."
+    columns:
+      - name: variable_name
+        description: "Nama variabel."
+        tests:
+          - not_null
+          - unique
+      - name: data_type
+        description: "Tipe data variabel."
+        tests:
+          - not_null
+      - name: description
+        description: "Deskripsi variabel."
+        tests:
+          - not_null
+
+  - name: report_summary
+    description: "Laporan ringkasan tingkat langganan berdasarkan pekerjaan dan bulan kontak."
+    columns:
+      - name: job
+        description: "Jenis pekerjaan."
+        tests:
+          - not_null
+      - name: contact_month
+        description: "Bulan kontak."
+        tests:
+          - not_null
+      - name: total_contacts
+        description: "Total jumlah kontak."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+      - name: total_subscriptions
+        description: "Total jumlah langganan."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+      - name: subscription_rate_pct
+        description: "Persentase tingkat langganan."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+
+  - name: report_economic_context
+    description: "Laporan analisis konteks ekonomi dan dampaknya terhadap tingkat langganan berdasarkan dataset lengkap."
+    columns:
+      - name: job
+        description: "Jenis pekerjaan."
+        tests:
+          - not_null
+      - name: contact_month
+        description: "Bulan kontak."
+        tests:
+          - not_null
+      - name: employment_trend
+        description: "Tren ketenagakerjaan (declining, stable, growing)."
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['declining', 'stable', 'growing']
+      - name: avg_consumer_price_index
+        description: "Rata-rata indeks harga konsumen."
+        tests:
+          - not_null
+      - name: avg_consumer_confidence_index
+        description: "Rata-rata indeks kepercayaan konsumen."
+        tests:
+          - not_null
+      - name: avg_euribor_rate
+        description: "Rata-rata tingkat euribor 3 bulan."
+        tests:
+          - not_null
+      - name: total_contacts
+        description: "Total jumlah kontak."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+      - name: total_subscriptions
+        description: "Total jumlah langganan."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+      - name: subscription_rate_pct
+        description: "Persentase tingkat langganan."
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
