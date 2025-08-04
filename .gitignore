@@ -4,3 +4,8 @@
 .pyc
 *.csv
 *.xlsx
+*.ipynb
+*.pyc
+/output/models
+output/summary.pdf
+/vit

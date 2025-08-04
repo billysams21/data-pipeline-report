@@ -1,0 +1,14 @@
+11:05:55  Running with dbt=1.10.4
+11:05:56  Registered adapter: postgres=1.9.0
+11:05:57  [WARNING]: Configuration paths exist in your dbt_project.yml file which do not apply to any resources.
+There are 3 unused configuration paths:
+- models.analytics_project.staging
+- models.analytics_project.intermediate
+- models.analytics_project.marts
+11:05:58  Found 11 models, 175 data tests, 2 sources, 550 macros
+11:06:03  Encountered an error while running operation: Database Error
+  could not translate host name "postgres" to address: No such host is known. 
+  
+11:06:03  Encountered an error:
+Compilation Error
+  dbt could not find a macro with the name 'query' in any package. This can happen when calling a macro that does not exist. Check for typos and/or install package dependencies with "dbt deps".

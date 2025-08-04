@@ -1,6 +1,0 @@
-# DBT Requirements
-# Install these packages in your Airflow environment
-
-dbt-core>=1.7.0
-dbt-postgres>=1.7.0
-astronomer-cosmos>=1.10.0

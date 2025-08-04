@@ -16,14 +16,38 @@ from cosmos import DbtTaskGroup, ProjectConfig, ProfileConfig
 from cosmos.profiles import PostgresUserPasswordProfileMapping
 
 from openpyxl.styles import Font, PatternFill
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
-from reportlab.lib.styles import getSampleStyleSheet
-from reportlab.lib.units import inch
-import matplotlib.pyplot as plt
+from function.pdf_generator import generate_pdf_report
+from function.model_trainer import train_and_evaluate_models
+
+def run_ml_pipeline_with_report(postgres_conn_id: str):
+    """
+    Runs the complete ML pipeline: train models and generate PDF report with results.
+    """
+    try:
+        # Step 1: Train and evaluate models
+        print("Starting machine learning model training...")
+        model_chart_path = train_and_evaluate_models(postgres_conn_id)
+        print(f"Model training completed. Chart saved to: {model_chart_path}")
+        
+        # Step 2: Generate PDF report with ML results
+        print("Generating PDF report with ML results...")
+        pdf_report_path = generate_pdf_report(postgres_conn_id, model_chart_path)
+        print(f"PDF report generated: {pdf_report_path}")
+        
+        return model_chart_path, pdf_report_path
+        
+    except Exception as e:
+        print(f"Error in ML pipeline: {e}")
+        try:
+            pdf_report_path = generate_pdf_report(postgres_conn_id)
+            return None, pdf_report_path
+        except Exception as pdf_error:
+            print(f"Error generating PDF report: {pdf_error}")
+            raise
 
 # Path
 BASE_PATH = "/opt/airflow/dags/data"
-OUTPUT_PATH = "/opt/airflow/dags/output"
+OUTPUT_PATH = "/opt/airflow/output"
 MAIN_ZIP_FILE = f"{BASE_PATH}/bank.zip"
 ADDITIONAL_ZIP_FILE = f"{BASE_PATH}/bank-additional.zip"
 DBT_PROJECT_PATH = f"{os.environ['AIRFLOW_HOME']}/dbt"
@@ -184,89 +208,11 @@ def generate_excel_report(postgres_conn_id: str):
             cell.fill = PatternFill(start_color="DDEEFF", end_color="DDEEFF", fill_type="solid")
     print(f"Laporan Excel berhasil dibuat di: {output_file}")
 
-def generate_pdf_report(postgres_conn_id: str):
-    """
-    Mengambil data agregat dari dbt dan membuat laporan PDF.
-    """
-    os.makedirs(OUTPUT_PATH, exist_ok=True)
-    hook = PostgresHook(postgres_conn_id=postgres_conn_id)
-    df = hook.get_pandas_df(sql="SELECT * FROM public.report_summary")
-    
-    # Bar Subscription Rate by Job
-    job_summary = df.groupby('job').agg(
-        total_contacts=('total_contacts', 'sum'),
-        total_subscriptions=('total_subscriptions', 'sum')
-    ).reset_index()
-    job_summary['subscription_rate_pct'] = (job_summary['total_subscriptions'] / job_summary['total_contacts']) * 100
-    job_summary = job_summary.sort_values('subscription_rate_pct', ascending=False)
-    
-    fig1, ax1 = plt.subplots(figsize=(10, 6))
-    ax1.bar(job_summary['job'], job_summary['subscription_rate_pct'], color='skyblue')
-    ax1.set_title('Subscription Rate by Job Category', fontsize=14)
-    ax1.set_xlabel('Job Category', fontsize=12)
-    ax1.set_ylabel('Subscription Rate (%)', fontsize=12)
-    plt.xticks(rotation=45, ha='right')
-    plt.tight_layout()
-    img1_buffer = BytesIO()
-    fig1.savefig(img1_buffer, format='png')
-    img1_buffer.seek(0)
-
-    # Line Chart Monthly Contact Success Trend
-    month_order = ['mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec']
-    df['contact_month'] = pd.Categorical(df['contact_month'], categories=month_order, ordered=True)
-    month_summary = df.groupby('contact_month', observed=False).agg(
-        total_subscriptions=('total_subscriptions', 'sum')
-    ).reset_index()
-
-    fig2, ax2 = plt.subplots(figsize=(10, 6))
-    ax2.plot(month_summary['contact_month'], month_summary['total_subscriptions'], marker='o', color='teal')
-    ax2.set_title('Monthly Subscription Trend', fontsize=14)
-    ax2.set_xlabel('Month', fontsize=12)
-    ax2.set_ylabel('Total Subscriptions', fontsize=12)
-    plt.tight_layout()
-    img2_buffer = BytesIO()
-    fig2.savefig(img2_buffer, format='png')
-    img2_buffer.seek(0)
-    
-    output_file = f"{OUTPUT_PATH}/summary.pdf"
-    doc = SimpleDocTemplate(output_file, pagesize=(8.5*inch, 11*inch), topMargin=inch, bottomMargin=inch, leftMargin=inch, rightMargin=inch)
-    styles = getSampleStyleSheet()
-    story = []
-
-    # Title Page
-    story.append(Paragraph("Bank Marketing Campaign Summary", styles['h1']))
-    story.append(Paragraph(f"Report Generated on: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
-    story.append(Spacer(1, 0.5*inch))
-
-    # Key Metrics
-    total_contacts = df['total_contacts'].sum()
-    total_subs = df['total_subscriptions'].sum()
-    overall_rate = (total_subs / total_contacts) * 100 if total_contacts > 0 else 0
-    story.append(Paragraph("Key Metrics", styles['h2']))
-    story.append(Paragraph(f"• Total Contacts Made: {total_contacts:,}", styles['Normal']))
-    story.append(Paragraph(f"• Overall Subscription Rate: {overall_rate:.2f}%", styles['Normal']))
-    story.append(Spacer(1, 0.5*inch))
-    
-    # Visualizations
-    story.append(Paragraph("Visualizations", styles['h2']))
-    story.append(Image(img1_buffer, width=6*inch, height=4*inch))
-    story.append(Spacer(1, 0.2*inch))
-    story.append(Image(img2_buffer, width=6*inch, height=4*inch))
-    story.append(Spacer(1, 0.5*inch))
-
-    # Insights
-    story.append(Paragraph("Insights & Recommendations", styles['h2']))
-    story.append(Paragraph("• Teknisi dan pelajar menunjukkan tingkat ketertarikan tertinggi untuk berlangganan.", styles['Normal']))
-    story.append(Paragraph("• Rekomendasi: Fokuskan kampanye berikutnya pada segmen pekerjaan dengan konversi tinggi.", styles['Normal']))
-    
-    doc.build(story)
-    print(f"Laporan PDF berhasil dibuat di: {output_file}")
-
 # DAG
 with DAG(
     dag_id="data_ingestion_pipeline",
     start_date=pendulum.datetime(2025, 1, 1, tz="UTC"),
-    schedule="*/5 * * * *",
+    schedule="*/55 * * * *",
     catchup=False,
     tags=["ingestion", "dbt", "reporting"],
 ) as dag:
@@ -326,9 +272,10 @@ with DAG(
         op_kwargs={"postgres_conn_id": "postgres_default"}
     )
 
-    make_pdf = PythonOperator(
-        task_id="make_pdf_report",
-        python_callable=generate_pdf_report,
+    # Integrated ML and PDF generation
+    run_ml_and_pdf = PythonOperator(
+        task_id="run_ml_and_generate_pdf",
+        python_callable=run_ml_pipeline_with_report,
         op_kwargs={"postgres_conn_id": "postgres_default"}
     )
 
@@ -336,4 +283,4 @@ with DAG(
     [wait_for_main_file, wait_for_additional_file] >> stage_main_table
     [wait_for_main_file, wait_for_additional_file] >> stage_metadata_table
     [stage_main_table, stage_metadata_table] >> dbt_task_group
-    dbt_task_group >> [make_excel, make_pdf]
+    dbt_task_group >> [run_ml_and_pdf, make_excel]
